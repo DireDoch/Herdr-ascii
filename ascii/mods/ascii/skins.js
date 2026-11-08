@@ -1,7 +1,7 @@
 // Skin tables shared by every ascii-* mod. A skin is a character set plus a
 // theme from themes/. Add a skin here; the mods don't change.
 import { div } from "gpui-kit";
-import { shared, setShared, run, theme, openOverlay } from "herdr";
+import { shared, setShared, run, theme, openOverlay, closeOverlay } from "herdr";
 
 export const SKINS = [
   {
@@ -43,8 +43,11 @@ export function marker(status, id) {
 
 // The picker opens right under the sidebar's [ Theme ] button, never at the pointer.
 // ponytail: fixed spot, assumes the sidebar stays on the left under the 46px brand block.
+// Pressing again closes it, so popups never stack. The picker clears the id when it closes.
 export function openPicker() {
-  openOverlay({ mod: "ascii", kind: "popup", frame: "none", width: 340, height: 190, at: { x: 8, y: 80 }, props: { role: "picker" } });
+  const open = shared("ascii.picker");
+  if (open) { closeOverlay(open); setShared("ascii.picker", null); return; }
+  setShared("ascii.picker", openOverlay({ mod: "ascii", kind: "popup", frame: "none", width: 360, height: 190, at: { x: 8, y: 80 }, props: { role: "picker" } }));
 }
 
 // "ctrl-shift-p" -> "^⇧P"

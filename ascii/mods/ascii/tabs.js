@@ -46,7 +46,7 @@ export default class Tabs extends View {
       .child(h_flex().id("tab-scroll").flex_1().min_w(0).gap(8).items_center().overflow_x_scrollbar().children(tabs.map(tab))
         .child(div().id("tab-new").flex_none().text_color(t.dim).hover((x) => x.text_color(t.accent))
           .on_mouse_down("left", stop)
-          .on_click(() => openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 })).child("[+]")))
+          .on_click(() => openOverlay({ mod: "ascii-new-menu", kind: "popup", frame: "none", width: 250, height: 512 })).child("[+]")))
       .when(enabled.includes("files"), (el) => el.child(panelButton("files", "Files")))
       .when(enabled.includes("changes"), (el) => el.child(panelButton("changes", "Changes")));
   }

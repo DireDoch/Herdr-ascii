@@ -1,10 +1,24 @@
 // Theme button, spaces, agents, then Settings / Add machine at the bottom.
 import { View, div } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
-import { spaces, agents, run, theme, nextCommand, setAgentOrder, updates } from "herdr";
+import { spaces, agents, run, theme, nextCommand, setAgentOrder, updates, layout, shared, setShared } from "herdr";
 import { skin, fill, marker, openPicker } from "./skins.js";
 
 const RANK = { blocked: 0, done: 1, working: 2, idle: 3 };
+
+function find(node, id) {
+  if (node?.id === id) return node;
+  for (const c of node?.children ?? []) { const f = find(c, id); if (f) return f; }
+  return null;
+}
+
+// Herdr's rule: the sidebar is a rail when narrower than 160px (ctrl-shift-b or a drag).
+const width = () => find(layout(), "sidebar")?.size?.px ?? Infinity;
+
+function expand() {
+  setShared("sidebar.collapsed", false);
+  run("layout.resize", { id: "sidebar", px: shared("sidebar.width") ?? 268 });
+}
 
 export default class Sidebar extends View {
   init(_props, cx) {
@@ -31,6 +45,7 @@ export default class Sidebar extends View {
       .child(div().flex_1().min_w(0).truncate().text_color(a.focused ? t.foreground : t.muted).child(a.program?.name ?? a.title))
       .child(div().flex_none().text_color(t.dim).child(a.space_name))
       .child(link(`pin-${a.address}`, a.pinned ? "[^]" : "[ ]", (_e, cx) => { cx.stop_propagation(); run("terminal.pin", { terminal: a.address, pinned: !a.pinned }); }, a.pinned ? t.accent : t.dim));
+    if (width() < 160) return this.rail(t, s, list, link);
     return v_flex().id("root").size_full().p(10).gap(8).bg(t.chrome).text_size(13)
       .child(link("theme-btn", "[ Theme ^⇧S ]", () => openPicker(), t.accent))
       .child(heading("spaces"))
@@ -43,5 +58,25 @@ export default class Sidebar extends View {
       .child(h_flex().flex_none().gap(10)
         .child(link("settings", updates().app.ready ? "[ Settings * ]" : "[ Settings ]", () => run("app.settings")))
         .child(link("machine", "[ + Machine ]", () => run("mod.open", { name: "machine-add" }), t.dim)));
+  }
+
+  // Collapsed: [~] theme, [n] per space, one marker per agent, >> expand, [#] settings, [+] machine.
+  rail(t, s, list, link) {
+    const rule = () => div().flex_none().text_color(t.dim).child(s.rule.repeat(3));
+    return v_flex().id("root").size_full().py(10).gap(8).items_center().bg(t.chrome).text_size(13)
+      .child(link("theme-btn", "[~]", () => openPicker(), t.accent))
+      .child(rule())
+      .child(v_flex().id("spaces").flex_1().gap(4).items_center().overflow_y_scrollbar().children(spaces().map((p) =>
+        div().id(`sp-${p.id}`).flex_none().hover((x) => x.text_color(t.foreground))
+          .text_color(p.status && p.status !== "idle" ? t[p.status] : p.active ? t.accent : t.dim)
+          .on_click(() => run("space.select", { id: p.id }))
+          .child(`[${p.index}]`))))
+      .child(rule())
+      .child(v_flex().id("agents").flex_1().gap(4).items_center().overflow_y_scrollbar().children(list.map((a) =>
+        div().id(`ag-${a.address}`).flex_none().on_click(() => run("pane.focus", { pane: a.pane })).child(marker(a.status, `r-${a.address}`)))))
+      .child(link("expand", ">>", () => expand(), t.dim))
+      .child(rule())
+      .child(link("settings", updates().app.ready ? "[*]" : "[#]", () => run("app.settings")))
+      .child(link("machine", "[+]", () => run("mod.open", { name: "machine-add" }), t.dim));
   }
 }
