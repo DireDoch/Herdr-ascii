@@ -1,8 +1,8 @@
 // The skin picker popup: arrows move the cursor, Enter applies, Esc cancels.
 import { View, div } from "gpui-kit";
-import { h_flex, v_flex } from "gpui-base";
+import { h_flex } from "gpui-base";
 import { props, closeOverlay, theme, themes, shared, setShared } from "herdr";
-import { SKINS, skin, applySkin, alpha, fill } from "./skins.js";
+import { SKINS, skin, applySkin, alpha, fill, popupBox } from "./skins.js";
 
 export default class ThemePicker extends View {
   init(_props, cx) {
@@ -32,8 +32,7 @@ export default class ThemePicker extends View {
       .child(div().w(44).child(s.name))
       .child(div().flex_1().min_w(0).overflow_hidden().whitespace_nowrap().child(s.sample))
       .child(swatches(s));
-    // ~75% opaque so what's behind stays readable (frame: "none": we draw our own edge).
-    return v_flex().id("picker").track_focus(this.handle).size_full().p(10).gap(4).bg(alpha(t.popover, "bf")).border(1).border_color(t.accent).text_size(13)
+    return popupBox(t).id("picker").track_focus(this.handle)
       .on_key_down((e, cx) => {
         const n = SKINS.length;
         if (e.key === "escape") return this.dismiss();

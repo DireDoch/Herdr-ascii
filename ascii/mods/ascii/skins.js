@@ -1,6 +1,7 @@
 // Skin tables shared by every ascii-* mod. A skin is a character set plus a
 // theme from themes/. Add a skin here; the mods don't change.
 import { div } from "gpui-kit";
+import { v_flex } from "gpui-base";
 import { shared, setShared, run, theme, openOverlay, closeOverlay } from "herdr";
 
 export const SKINS = [
@@ -58,3 +59,8 @@ export function chord(keys) {
 
 // "#rrggbb" or "#rrggbbaa" -> "#rrggbb" + a
 export const alpha = (c, a) => c.slice(0, 7) + a;
+
+// The see-through popup box shared by the skin picker and the sort menu.
+export function popupBox(t) {
+  return v_flex().size_full().p(10).gap(4).bg(alpha(t.popover, "bf")).border(1).border_color(t.accent).text_size(13);
+}

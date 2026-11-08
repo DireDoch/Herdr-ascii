@@ -7,8 +7,9 @@ import Tabs from "./tabs.js";
 import Status from "./status.js";
 import Pane from "./pane.js";
 import Picker from "./picker.js";
+import Sort from "./sort.js";
 
-const PARTS = { sidebar: Sidebar, tabs: Tabs, status: Status, pane: Pane, picker: Picker };
+const PARTS = { sidebar: Sidebar, tabs: Tabs, status: Status, pane: Pane, picker: Picker, sort: Sort };
 
 function role() {
   const p = props() ?? {};

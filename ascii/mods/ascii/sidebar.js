@@ -1,7 +1,7 @@
 // Theme button, spaces, agents, then Settings / Add machine at the bottom.
 import { View, div } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
-import { spaces, agents, run, theme, nextCommand, setAgentOrder, updates, layout, shared, setShared } from "herdr";
+import { spaces, agents, run, theme, nextCommand, setAgentOrder, updates, layout, shared, setShared, openOverlay } from "herdr";
 import { skin, fill, marker, openPicker } from "./skins.js";
 
 const RANK = { blocked: 0, done: 1, working: 2, idle: 3 };
@@ -28,11 +28,19 @@ export default class Sidebar extends View {
 
   render() {
     const t = theme(), s = skin();
-    const list = agents().slice().sort((a, b) => (b.pinned - a.pinned) || (RANK[a.status] - RANK[b.status]) || (b.seq - a.seq));
+    const byPriority = (a, b) => (b.pinned - a.pinned) || (RANK[a.status] - RANK[b.status]) || (b.seq - a.seq);
+    const grouped = shared("ascii.agentSort") === "space";
+    const all = agents();
+    // Grouped: each space's agents together, in sidebar order; else most urgent first.
+    const groups = grouped
+      ? spaces().map((p) => ({ space: p, list: all.filter((a) => a.space === p.id).sort(byPriority) })).filter((g) => g.list.length)
+      : [{ space: null, list: all.slice().sort(byPriority) }];
+    const list = groups.flatMap((g) => g.list);
     setAgentOrder(list.map((a) => a.address));
-    const heading = (label) => h_flex().flex_none().gap(4).text_color(t.dim).child(`${s.rule}${s.rule} ${label} `).child(fill(s.rule, t.dim));
     const link = (id, label, action, color = t.muted) => div().id(id).flex_none().text_color(color).hover((x) => x.text_color(t.accent)).on_click(action).child(label);
-    const space = (p) => h_flex().id(`sp-${p.id}`).gap(6).items_center().hover((x) => x.bg(t.hover))
+    const heading = (label, button) => h_flex().flex_none().gap(4).text_color(t.dim).child(`${s.rule}${s.rule} ${label} `).child(fill(s.rule, t.dim))
+      .when(Boolean(button), (el) => el.child(button));
+    const space = (p) => h_flex().id(`sp-${p.id}`).px(4).gap(6).items_center().when(p.active, (el) => el.bg(t.selected)).hover((x) => x.bg(t.hover))
       .on_click(() => run("space.select", { id: p.id }))
       .child(div().flex_none().text_color(p.active ? t.accent : t.dim).child(p.active ? "[*]" : "[ ]"))
       .child(div().flex_1().min_w(0).truncate().text_color(p.active ? t.foreground : t.muted).child(p.name))
@@ -43,17 +51,20 @@ export default class Sidebar extends View {
       .on_mouse_down("right", (_e, cx) => { cx.stop_propagation(); run("terminal.peek", { terminal: a.address }); })
       .child(marker(a.status, `ag-${a.address}`))
       .child(div().flex_1().min_w(0).truncate().text_color(a.focused ? t.foreground : t.muted).child(a.program?.name ?? a.title))
-      .child(div().flex_none().text_color(t.dim).child(a.space_name))
+      .when(!grouped, (el) => el.child(div().flex_none().text_color(t.dim).child(a.space_name)))
       .child(link(`pin-${a.address}`, a.pinned ? "[^]" : "[ ]", (_e, cx) => { cx.stop_propagation(); run("terminal.pin", { terminal: a.address, pinned: !a.pinned }); }, a.pinned ? t.accent : t.dim));
     if (width() < 160) return this.rail(t, s, list, link);
     return v_flex().id("root").size_full().p(10).gap(8).bg(t.chrome).text_size(13)
       .child(link("theme-btn", "[ Theme ^⇧S ]", () => openPicker(), t.accent))
-      .child(heading("spaces"))
+      .child(heading("spaces", link("space-new", "[+]", () => run("space.new"), t.dim)))
       .child(v_flex().id("spaces").flex_1().gap(4).overflow_y_scrollbar().children(spaces().map(space)))
-      .child(heading(`agents (${list.length})`))
+      .child(heading(`agents (${list.length})`, link("sort", "(o)", () => openOverlay({ mod: "ascii", kind: "popup", frame: "none", width: 230, height: 96, props: { role: "sort" } }), t.dim)))
       .child(v_flex().id("agents").flex_1().gap(4).overflow_y_scrollbar()
         .when(list.length === 0, (el) => el.child(div().text_color(t.dim).child("  no agents running")))
-        .children(list.map(agent)))
+        .children(groups.flatMap((g) => [
+          ...(g.space ? [div().text_color(t.dim).truncate().child(`${s.h} ${g.space.name}`)] : []),
+          ...g.list.map(agent),
+        ])))
       .child(heading(""))
       .child(h_flex().flex_none().gap(10)
         .child(link("settings", updates().app.ready ? "[ Settings * ]" : "[ Settings ]", () => run("app.settings")))
@@ -66,8 +77,9 @@ export default class Sidebar extends View {
     return v_flex().id("root").size_full().py(10).gap(8).items_center().bg(t.chrome).text_size(13)
       .child(link("theme-btn", "[~]", () => openPicker(), t.accent))
       .child(rule())
+      .child(link("space-new", "[+]", () => run("space.new"), t.dim))
       .child(v_flex().id("spaces").flex_1().gap(4).items_center().overflow_y_scrollbar().children(spaces().map((p) =>
-        div().id(`sp-${p.id}`).flex_none().hover((x) => x.text_color(t.foreground))
+        div().id(`sp-${p.id}`).flex_none().px(3).when(p.active, (el) => el.bg(t.selected)).hover((x) => x.text_color(t.foreground))
           .text_color(p.status && p.status !== "idle" ? t[p.status] : p.active ? t.accent : t.dim)
           .on_click(() => run("space.select", { id: p.id }))
           .child(`[${p.index}]`))))
