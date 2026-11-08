@@ -12,7 +12,7 @@ function find(node, id) {
   return null;
 }
 
-// Herdr's rule: the sidebar is a rail when narrower than 160px (ctrl-shift-b or a drag).
+// Herdr's rule: the sidebar is a rail when narrower than 160px (collapse button or a drag).
 const width = () => find(layout(), "sidebar")?.size?.px ?? Infinity;
 
 function expand() {
