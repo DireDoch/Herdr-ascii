@@ -1,3 +1,6 @@
 # Written by Herdr on every start
 *.d.ts
 jsconfig.json
+
+# Local working notes
+CLAUDE.md
